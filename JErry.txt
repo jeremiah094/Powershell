@@ -1,0 +1,96 @@
+EXCEL UNINSTALL
+
+$servers = Get-Content C:\Servers\Servers.txt
+
+foreach( $server in $servers)
+
+{
+
+$app = Get-WmiObject Win32_Product -ComputerName $server | where { $_.name -eq "Microsoft Office Standard 2013" }
+$app.Uninstall()
+
+}
+
+admin access
+
+$a = Get-Content "C:\Users\jeremiahp\Desktop\AdminAccess\Host.txt"
+foreach ($i in $a)
+  { 
+    Start-Transcript -path "C:\Users\jeremiahp\Desktop\AdminAccess\output2.csv" -append
+    $i + "`n" + "===="; net localgroup "Remote Desktop Users"
+    Stop-Transcript 
+  }
+
+BIOS
+
+#Requires -RunAsAdministrator
+
+$computerList = Get-Content C:\Users\jeremiahp\Desktop\Bios\host.txt
+$logFile = 'C:\Users\jeremiahp\Desktop\Bios\result_support.txt'
+
+foreach($computer in $computerList)
+{
+    $passwordState = (gwmi -Class Lenovo_BiosPasswordSettings -Namespace root\wmi -ComputerName $computer).PasswordState
+    "$computer : $passwordState" >> $logFile
+}
+
+MCAFEE
+$result = Get-ItemProperty -Path 'HKLM:\SOFTWARE\WOW6432Node\McAfee EndPoint Encryption\MfeEpePc\Status'
+$result | OutFile '\\try4it02\c$\Users\jeremiahp\Desktop\Mcafee\result.txt' -Append
+
+Monitor
+
+$Computers = Get-Content "C:\Users\kamarajm\desktop\Monitor\hosts.txt"
+
+$LogFile = "C:\result.txt"
+
+"Manufacturer,Name,Serial" | Out-File $LogFile
+
+ForEach ($Monitor in $Monitors)
+{
+    $Monitors = Get-WmiObject WmiMonitorID -Namespace root/wmi
+	$Manufacturer = ($Monitor.ManufacturerName -notmatch 0 | ForEach{[char]$_}) -join ""
+	$Name = ($Monitor.UserFriendlyName -notmatch 0 | ForEach{[char]$_}) -join ""
+	$Serial = ($Monitor.SerialNumberID -notmatch 0 | ForEach{[char]$_}) -join ""
+	
+	"$Manufacturer,$Name,$Serial" | Out-File $LogFile -append
+}
+
+TMS
+
+$servers = Get-Content C:\Users\jeremiahp\Desktop\TMS\hosts.txt
+
+foreach( $server in $servers)
+{
+if (test-Connection -ComputerName $Server -Count 2 -Quiet )
+{
+Copy-Item –Path "\\$server\c$\ProgramData\Microsoft\Windows\Start Menu\Programs\TMS.lnk" –Destination "\\$server\C$\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp\" -Recurse -force
+"TMS is successfully copied in $Server" | Out-File -FilePath C:\Users\jeremiahp\Desktop\TMS\result.txt -Append
+}
+else
+{
+"$Server is Offline" | Out-File -FilePath C:\Users\jeremiahp\Desktop\TMS\result.txt -Append
+}
+}
+
+TREND MICRO
+
+$servers = Get-Content C:\Users\jeremiahp\Desktop\Trend\hosts.txt
+
+foreach( $server in $servers)
+{
+if (test-Connection -ComputerName $Server -Count 2 -Quiet )
+{
+Get-Item "\\$server\c$\Program Files\Trend Micro\Security Agent" | select -Property fullName, LastWriteTime | Export-Csv 'C:\Users\jeremiahp\Desktop\Trend\results.csv' -NoTypeInformation -Append
+}
+else
+{
+"$Server" | Out-File 'C:\Users\jeremiahp\Desktop\Trend\results-off.txt' -Append
+}
+
+Office uninstall
+Get-Service remoteregistry -ComputerName $computer | start-service
+Copy-item "\\$server\share\Office 2010" -conatiner -recurse \\$computer\c$\windows\temp\
+$InstallString = '"C:\windows\temp\Office 2010\setup.exe" /adminfile Updates/OfficeSetup.MSP /config ProPlus.WW/config.xml"'
+([WMICLASS]"\\$computer\ROOT\CIMV2:Win32_Process").Create($InstallString)
+
